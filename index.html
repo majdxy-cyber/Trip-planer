@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Trip Planner – מתכנן הטיולים</title>
+  <meta name="description" content="בנה מסלול טיול לתאילנד בלחיצה אחת – מפה, נוף טבעי, קטנוע ורכבת.">
+  <style>
+    :root {
+      --ink-900:#0f172a; --ink-800:#1e293b; --ink-600:#475569;
+      --glass:rgba(255,255,255,0.75); --glass-brd:rgba(255,255,255,0.5);
+      --accent-1:#22d3ee; --accent-2:#818cf8;
+    }
+    html,body{height:100%}
+    body{
+      margin:0; color:var(--ink-800);
+      font-family:"Segoe UI",system-ui,-apple-system,"Rubik","Heebo",Arial,sans-serif;
+      line-height:1.5; overflow-x:hidden;
+    }
+    #bg{
+      position:fixed; inset:0; z-index:-1; width:100%; height:100%;
+      object-fit:cover; pointer-events:none;
+    }
+    .site-header{
+      display:flex; align-items:center; justify-content:space-between;
+      padding:14px 20px; position:sticky; top:0; z-index:10;
+      backdrop-filter: blur(8px);
+      background: rgba(255,255,255,0.45);
+      border-bottom: 1px solid var(--glass-brd);
+    }
+    .brand{display:flex; align-items:center; gap:10px; font-weight:800; color:var(--ink-900)}
+    .brand .logo{font-size:22px}
+    .nav a{color:var(--ink-800); text-decoration:none; margin-inline:12px; font-weight:600}
+    .nav a:hover{text-decoration:underline}
+    main{padding:24px 16px 80px; max-width:1100px; margin-inline:auto}
+    .hero{ text-align:center; margin-top:24px }
+    .hero h1{ margin:0 0 10px; font-size:clamp(28px,4vw,42px); color:var(--ink-900) }
+    .hero p{ margin:0 0 18px; color:var(--ink-600) }
+    .cta{
+      border:none; cursor:pointer; font-weight:800;
+      padding:12px 20px; border-radius:12px; color:#fff;
+      background:linear-gradient(90deg,var(--accent-1),var(--accent-2));
+      box-shadow:0 8px 24px rgba(0,0,0,0.18);
+    }
+    .cards{
+      display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr));
+      gap:14px; padding:10px 0 24px;
+    }
+    .card{
+      background:rgba(255,255,255,0.78); border:1px solid rgba(255,255,255,0.6);
+      border-radius:16px; padding:16px; box-shadow:0 10px 24px rgba(0,0,0,0.15);
+    }
+    .glass{ background:var(--glass); border:1px solid var(--glass-brd); backdrop-filter:blur(8px) }
+    .planner{ max-width:980px; margin:24px auto }
+    .planner .grid{ display:grid; gap:12px; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); margin:12px 0 }
+    label{ display:flex; flex-direction:column; gap:6px; font-weight:600; color:var(--ink-900) }
+    input,select{ padding:10px 12px; border-radius:10px; border:1px solid rgba(0,0,0,0.15); outline:none }
+    input:focus,select:focus{ border-color:var(--accent-2); box-shadow:0 0 0 3px rgba(129,140,248,0.2) }
+    #result{ margin-top:14px }
+    .result-card{ margin-top:10px; padding:12px; border-radius:12px; border:1px dashed rgba(0,0,0,0.2); background:rgba(255,255,255,0.6) }
+    .site-footer{ padding:24px 16px 40px; text-align:center; color:var(--ink-600) }
+    .site-footer .line{ height:1px; width:100%; max-width:1000px; margin:0 auto 12px; background:linear-gradient(90deg,transparent,rgba(0,0,0,0.15),transparent) }
+  </style>
+</head>
+<body>
+  <!-- רקע SVG -->
+  <svg id="bg" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1920 1080" preserveAspectRatio="xMidYMid slice">
+    <defs>
+      <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stop-color="#60a5fa"/>
+        <stop offset="40%" stop-color="#93c5fd"/>
+        <stop offset="70%" stop-color="#fde68a"/>
+        <stop offset="100%" stop-color="#fca5a5"/>
+      </linearGradient>
+      <linearGradient id="hill1" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stop-color="#8dd3c7"/>
+        <stop offset="100%" stop-color="#52b69a"/>
+      </linearGradient>
+      <linearGradient id="hill2" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stop-color="#b7e4c7"/>
+        <stop offset="100%" stop-color="#76c893"/>
+      </linearGradient>
+    </defs>
+    <rect width="1920" height="1080" fill="url(#sky)"/>
+    <circle cx="350" cy="200" r="80" fill="#fff59d" opacity="0.9"/>
+    <circle cx="350" cy="200" r="130" fill="#fff59d" opacity="0.25"/>
+    <path d="M0 650 C200 600, 300 620, 500 570 C700 520, 900 600, 1100 560 C1300 520, 1500 600, 1920 560 L1920 1080 L0 1080 Z" fill="url(#hill2)" opacity="0.8"/>
+    <path d="M0 720 C250 660, 420 720, 650 660 C900 600, 1120 720, 1400 680 C1650 640, 1780 720, 1920 700 L1920 1080 L0 1080 Z" fill="url(#hill1)"/>
+    <path d="M200 350 C 350 300, 500 400, 650 360 S 1000 320, 1150 380 S 1400 500, 1600 420" fill="none" stroke="#1f2937" stroke-width="4" stroke-dasharray="12 10" opacity="0.6"/>
+  </svg>
+
+  <header class="site-header">
+    <div class="brand">
+      <span class="logo">🗺️</span>
+      <span class="name">Trip Planner</span>
+    </div>
+    <nav class="nav">
+      <a href="#features">איך זה עובד</a>
+      <a href="#plan">תכנון</a>
+      <a href="#about">למה אנחנו</a>
+    </nav>
+  </header>
+
+  <main>
+    <section class="hero card glass">
+      <h1>תכנן את הטיול המושלם לתאילנד – בלחיצה אחת</h1>
+      <p>בחר סוג טיול, תקציב וימים – וקבל מסלול יומי, המלצות ולינקים להזמנה.</p>
+      <button class="cta" id="startBtn">בנה מסלול עכשיו</button>
+    </section>
+
+    <section id="features" class="cards">
+      <div class="card"><h3>🗺️ ממלאים שאלון קצר</h3><p>משך הטיול, יעד, תקציב וסוג טיול.</p></div>
+      <div class="card"><h3>🚆 מקבלים מסלול יומי</h3><p>חלוקה לפי ימים עם אטרקציות מומלצות והערכת תקציב.</p></div>
+      <div class="card"><h3>🛵 תחבורה נוחה</h3><p>קטנוע בעיר/חופים או רכבת בין־עירונית.</p></div>
+      <div class="card"><h3>📍 שומרים ומשתפים</h3><p>ייצוא מהיר ושיתוף עם חברים/משפחה.</p></div>
+    </section>
+
+    <section id="plan" class="planner card glass">
+      <h2>נתחיל לתכנן</h2>
+      <form id="tripForm">
+        <div class="grid">
+          <label>נקודת יציאה <input type="text" name="from" required></label>
+          <label>יעד <input type="text" name="to" required></label>
+          <label>תאריך יציאה <input type="date" name="dateStart" required></label>
+          <label>תאריך חזרה <input type="date" name="dateEnd"></label>
+          <label>אמצעי תחבורה
+            <select name="mode">
+              <option>🛵 קטנוע</option><option>🚆 רכבת</option>
+              <option>🚌 אוטובוס</option><option>🚗 רכב</option>
+            </select>
+          </label>
+          <label>תקציב יומי (₪) <input type="number" name="budget" min="0"></label>
+        </div>
+        <button class="cta" type="submit">בנה מסלול ✨</button>
+      </form>
+      <div id="result"></div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="line"></div>
+    <p>© <span id="year"></span> Trip Planner. כל הזכויות שמורות.</p>
+  </footer>
+
+  <script>
+    document.getElementById('year').textContent = new Date().getFullYear();
+    document.getElementById('startBtn')?.addEventListener('click',() => {
+      document.querySelector('#plan')?.scrollIntoView({behavior:'smooth'});
+    });
+    const form = document.getElementById('tripForm');
+    form?.addEventListener('submit',(e)=>{
+      e.preventDefault();
+      const data = Object.fromEntries(new FormData(form).entries());
+      let speed = 40;
+      if (data.mode.includes('קטנוע')) speed=35;
+      if (data.mode.includes('רכבת')) speed=80;
+      if (data.mode.includes('אוטובוס')) speed=55;
+      if (data.mode.includes('רכב')) speed=70;
+      document.getElementById('result').innerHTML=`
+        <div class="result-card">
+          <strong>מסלול נבנה:</strong><br/>
+          מ־<b>${data.from||'מוצא'}</b> אל <b>${data.to||'יעד'}</b><br/>
+          🗓️ ${data.dateStart||'—'} עד ${data.dateEnd||'—'}<br/>
+          🚍 מצב: ${data.mode||'—'}, מהירות ~${speed} קמ״ש<br/>
+          💸 תקציב יומי: ${data.budget? '₪'+data.budget:'—'}
+        </div>`;
+    });
+  </script>
+</body>
+</html>
